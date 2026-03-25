@@ -40,48 +40,85 @@ const HeroBackground = () => {
         }}
       />
       
-      {/* Animated glowing orbs */}
+      {/* Flowing Data Structures (Nexus Inspired) */}
+      <div className="absolute inset-0 opacity-20 overflow-hidden pointer-events-none">
+        {[...Array(5)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ 
+              pathLength: [0, 1, 0],
+              opacity: [0, 0.4, 0],
+              x: ['-10%', '110%']
+            }}
+            transition={{
+              duration: 8 + i * 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 3
+            }}
+            className="absolute h-[1px] w-[300px] bg-gradient-to-r from-transparent via-accent to-transparent rotate-[-15deg]"
+            style={{ 
+              top: `${20 + i * 15}%`,
+              boxShadow: '0 0 15px var(--color-accent)'
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Deep Floating Grid (Data Matrix) */}
+      <motion.div 
+        style={{ 
+            x: x1, 
+            y: y1,
+            backgroundImage: 'linear-gradient(var(--color-white) 1px, transparent 1px), linear-gradient(90deg, var(--color-white) 1px, transparent 1px)',
+            backgroundSize: '100px 100px',
+        }}
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+      />
+      
+      {/* Animated glowing orbs (Refined) */}
       <motion.div
         style={{ x: x1, y: y1 }}
         animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
+          scale: [1, 1.15, 1],
+          opacity: [0.3, 0.45, 0.3],
         }}
         transition={{
-          duration: 10,
+          duration: 12,
           repeat: Infinity,
           ease: "easeInOut"
         }}
-        className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full mix-blend-screen filter blur-[100px] bg-secondary opacity-40 pointer-events-none"
+        className="absolute -top-[15%] -left-[5%] w-[55%] h-[55%] rounded-full mix-blend-screen filter blur-[100px] bg-secondary opacity-40 pointer-events-none"
       />
       
       <motion.div
         style={{ x: x2, y: y2 }}
         animate={{
-          scale: [1, 1.5, 1],
-          opacity: [0.2, 0.4, 0.2],
+          scale: [1, 1.4, 1],
+          opacity: [0.2, 0.35, 0.2],
         }}
         transition={{
-          duration: 15,
+          duration: 18,
           repeat: Infinity,
           ease: "easeInOut",
           delay: 2
         }}
-        className="absolute top-[40%] right-[10%] w-[50%] h-[50%] rounded-full mix-blend-screen filter blur-[120px] bg-accent opacity-30 pointer-events-none"
+        className="absolute top-[35%] right-[5%] w-[45%] h-[45%] rounded-full mix-blend-screen filter blur-[110px] bg-accent opacity-30 pointer-events-none"
       />
 
       <motion.div
         style={{ x: x1, y: y2 }}
         animate={{
-          scale: [1, 1.3, 1],
+          scale: [1, 1.25, 1],
         }}
         transition={{
-          duration: 12,
+          duration: 14,
           repeat: Infinity,
           ease: "easeInOut",
           delay: 5
         }}
-        className="absolute -bottom-[20%] left-[20%] w-[40%] h-[40%] rounded-full mix-blend-screen filter blur-[90px] bg-neon opacity-20 pointer-events-none"
+        className="absolute -bottom-[15%] left-[15%] w-[35%] h-[35%] rounded-full mix-blend-screen filter blur-[80px] bg-neon opacity-20 pointer-events-none"
       />
 
       {/* Dark overlay for text legibility */}

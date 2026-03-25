@@ -1,95 +1,104 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import Button from '../components/ui/Button';
+import KeycapButton from '../components/ui/KeycapButton';
 import Container from '../components/layout/Container';
-import HeroBackground from '../components/animations/HeroBackground';
+import NexusFactory from '../components/animations/NexusFactory';
 
 const Home = () => {
   const navigate = useNavigate();
 
-  // Animation variants for staggered entrance
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.3,
+        staggerChildren: 0.15,
+        delayChildren: 0.5,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut' } },
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
-      {/* Interactive Cyber Background */}
-      <HeroBackground />
+    <div className="relative min-h-screen flex items-center justify-center text-white overflow-hidden bg-primary font-mono">
+      {/* 3D Isometric Biotech Factory Background */}
+      <NexusFactory />
 
-      <Container className="relative z-10 flex flex-col items-center justify-center text-center">
+      <Container className="relative z-20 flex flex-col items-center justify-center text-center">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="flex flex-col items-center gap-8 max-w-3xl"
+          className="flex flex-col items-center gap-10 max-w-4xl"
         >
-          {/* Main Title Area */}
-          <motion.div variants={itemVariants} className="space-y-4">
-            <motion.div 
-              className="inline-block"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: 'spring', stiffness: 300 }}
-            >
-              <h1 className="text-6xl md:text-8xl font-black tracking-tighter drop-shadow-xl">
-                Typing<span className="text-transparent bg-clip-text bg-gradient-to-r from-neon to-accent">Verse</span>
+          {/* Main Title Area (Hacker Style) */}
+          <motion.div variants={itemVariants} className="space-y-6">
+            <div className="relative inline-block group">
+              <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                TYPING<span className="text-accent underline decoration-accent/30 underline-offset-8">VERSE</span>
               </h1>
-            </motion.div>
+              {/* Glitch Effect Proxy */}
+              <div className="absolute -inset-1 bg-accent/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            </div>
             
-            <p className="text-xl md:text-2xl text-accent/80 font-medium tracking-wide max-w-xl mx-auto drop-shadow-md">
-              A new way to experience typing. Fast, competitive, and distinctly futuristic.
+            <p className="text-lg md:text-xl text-accent/60 font-medium tracking-[0.3em] max-w-2xl mx-auto uppercase">
+               Next-Gen Bio-Neural Interface // Established.
             </p>
           </motion.div>
 
-          {/* CTA Area */}
-          <motion.div variants={itemVariants} className="pt-8">
-            <Button 
+          {/* CTA Area with Mechanical Keycaps */}
+          <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-8 pt-6">
+            <KeycapButton 
               onClick={() => navigate('/battle')} 
               variant="primary" 
-              className="text-xl px-10 py-5 group"
+              className="group"
             >
-              <span>Start Battle</span>
-              <motion.span 
-                className="ml-2 inline-block"
-                animate={{ x: [0, 5, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              Initialize Battle
+            </KeycapButton>
+            
+            <div className="flex gap-4">
+              <KeycapButton 
+                onClick={() => navigate('/reflex')} 
+                variant="secondary"
               >
-                →
-              </motion.span>
-            </Button>
+                Reflex.exe
+              </KeycapButton>
+              <KeycapButton 
+                onClick={() => navigate('/audio')} 
+                variant="secondary"
+              >
+                Audio.so
+              </KeycapButton>
+            </div>
           </motion.div>
 
-          {/* Feature highlights below CTA */}
+          {/* System Telemetry */}
           <motion.div 
             variants={itemVariants}
-            className="flex flex-wrap justify-center gap-6 mt-16 pt-10 border-t border-white/10 w-full"
+            className="flex flex-wrap justify-center gap-10 mt-12 pt-10 border-t border-accent/10 w-full"
           >
             {[
-              { label: 'Real-time Multi', glow: 'text-neon' },
-              { label: 'AI Analytics', glow: 'text-accent' },
-              { label: 'Dynamic Arenas', glow: 'text-success' }
-            ].map((feature, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full shadow-[0_0_10px_currentColor] bg-current ${feature.glow}`} />
-                <span className="text-sm font-semibold text-white/60 uppercase tracking-widest">{feature.label}</span>
+              { label: 'Latency', value: '0.4ms' },
+              { label: 'Sync Rate', value: '99.9%' },
+              { label: 'Auth Status', value: 'Encrypted' }
+            ].map((stat, idx) => (
+              <div key={idx} className="flex flex-col items-start min-w-[120px]">
+                <span className="text-[10px] font-bold text-accent/40 uppercase tracking-widest">{stat.label}</span>
+                <span className="text-sm font-black text-accent">{stat.value}</span>
               </div>
             ))}
           </motion.div>
 
         </motion.div>
       </Container>
+
+      {/* Persistent Scanline Effect */}
+      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
     </div>
   );
 };

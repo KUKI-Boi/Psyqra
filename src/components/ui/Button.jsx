@@ -28,14 +28,39 @@ const Button = ({
 
   return (
     <motion.button
-      whileHover={!disabled ? { scale: 1.02 } : {}}
-      whileTap={!disabled ? { scale: 0.98 } : {}}
-      className={`${baseStyles} ${variants[variant]} ${disabledStyles} ${className}`}
+      whileHover={!disabled ? { 
+        scale: 1.02, 
+        y: -2,
+        boxShadow: "0 10px 30px -10px rgba(0,240,255,0.3)"
+      } : {}}
+      whileTap={!disabled ? { 
+        scale: 0.94, 
+        y: 1, 
+        boxShadow: "0 2px 10px -5px rgba(0,240,255,0.5)"
+      } : {}}
+      transition={{ 
+        type: "spring", 
+        stiffness: 600, 
+        damping: 30, 
+        mass: 0.8 
+      }}
+      className={`${baseStyles} ${variants[variant]} ${disabledStyles} ${className} active:brightness-125`}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       {...props}
     >
       <span className="relative z-10">{children}</span>
+      
+      {/* Mechanical click flash */}
+      {!disabled && (
+        <motion.span 
+          initial={{ opacity: 0 }}
+          whileTap={{ opacity: 1 }}
+          transition={{ duration: 0.05 }}
+          className="absolute inset-0 bg-white/20 pointer-events-none"
+        />
+      )}
+
       {/* Subtle pulse layer for primary */}
       {variant === 'primary' && !disabled && (
         <span className="absolute inset-0 rounded-xl bg-neon/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
