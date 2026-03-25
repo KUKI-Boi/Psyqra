@@ -19,7 +19,8 @@ const isAllowedCode = (code) => {
   );
 };
 
-export const useTyping = (expectedText) => {
+export const useTyping = (expectedText, options = {}) => {
+  const { onProgress, onError } = options;
   const [typedChars, setTypedChars] = useState('');
   const [cursorIndex, setCursorIndex] = useState(0);
   const [errors, setErrors] = useState(0);
@@ -31,18 +32,9 @@ export const useTyping = (expectedText) => {
   // Core typing logic
   const handleKeyDown = useCallback(
     (e) => {
-      // Prevent default scrolling for spacebar
-      if (e.code === 'Space') {
-        e.preventDefault();
-      }
-
-      // Ignore modifier keys and non-character inputs
+      if (e.code === 'Space') e.preventDefault();
       if (!isAllowedCode(e.code) || e.ctrlKey || e.altKey || e.metaKey) return;
-
-      // Start timer on first valid keypress (not backspace)
-      if (!startTime && e.code !== 'Backspace') {
-        setStartTime(Date.now());
-      }
+      if (!startTime && e.code !== 'Backspace') setStartTime(Date.now());
 
       setTypedChars((prev) => {
         let newTypedChars = prev;
@@ -51,21 +43,22 @@ export const useTyping = (expectedText) => {
           newTypedChars = prev.slice(0, -1);
           setCursorIndex((curr) => Math.max(0, curr - 1));
         } else {
-          // Prevent typing beyond expected text length
           if (prev.length >= expectedText.length) return prev;
 
           const charToType = e.key;
           newTypedChars = prev + charToType;
           
-          // Track errors (only when typing forward)
           if (expectedText[prev.length] !== charToType) {
             setErrors((curr) => curr + 1);
+            if (onError) onError();
+          } else {
+            // Correct character typed
+            if (onProgress) onProgress(newTypedChars.length);
           }
 
           setCursorIndex((curr) => curr + 1);
         }
 
-        // If finished
         if (newTypedChars.length === expectedText.length && !endTime) {
           setEndTime(Date.now());
         }
@@ -73,7 +66,7 @@ export const useTyping = (expectedText) => {
         return newTypedChars;
       });
     },
-    [expectedText, startTime, endTime]
+    [expectedText, startTime, endTime, onProgress, onError]
   );
 
   // Attach global event listener

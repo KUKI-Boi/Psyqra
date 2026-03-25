@@ -3,10 +3,17 @@ import Character from './Character';
 import { useTyping } from '../../hooks/useTyping';
 
 // A predefined text for Phase 3 testing
-const TEST_TEXT = "The quick brown fox jumps over the lazy dog. Programming is the art of algorithm design and the craft of debugging errant code. Typing fast requires practice, muscle memory, and a calm focus.";
+const TypingEngine = ({ text, onProgress, onError, onStatsUpdate }) => {
+  const { typedChars, cursorIndex, wpm, accuracy, isComplete, errors } = useTyping(text, {
+    onProgress,
+    onError,
+  });
 
-const TypingEngine = () => {
-  const { typedChars, cursorIndex, wpm, accuracy, isComplete, errors } = useTyping(TEST_TEXT);
+  useEffect(() => {
+    if (onStatsUpdate) {
+      onStatsUpdate({ wpm, accuracy, errors, isComplete });
+    }
+  }, [wpm, accuracy, errors, isComplete, onStatsUpdate]);
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-12 mt-10">
@@ -32,7 +39,7 @@ const TypingEngine = () => {
         
         {/* Render characters */}
         <div className="flex flex-wrap text-left leading-relaxed">
-          {TEST_TEXT.split('').map((char, index) => {
+          {text.split('').map((char, index) => {
             const typed = typedChars[index];
             const isActive = index === cursorIndex;
             return (
