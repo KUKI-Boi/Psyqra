@@ -1,437 +1,339 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Float, RoundedBox } from '@react-three/drei';
+import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 
-const ACCENT = '#00FF41';
-const ACCENT_DIM = '#00cc33';
-const BODY = '#e8e8e8';
-const BODY_DARK = '#d0d0d0';
-const BODY_LIGHT = '#f5f5f5';
+/* ═══════════════════════════════════════════════════════════════ */
+/*  COLOR PALETTE — Electric Blue + White/Gray                    */
+/* ═══════════════════════════════════════════════════════════════ */
+const BLUE       = '#3B82F6';  // Electric blue primary
+const BLUE_GLOW  = '#60A5FA';  // Lighter blue for glow
+const BLUE_DEEP  = '#1D4ED8';  // Deeper blue for accents
+const WHITE      = '#f0f0f0';  // Soft white body
+const GRAY       = '#d4d4d8';  // Light gray
+const GRAY_DARK  = '#a1a1aa';  // Darker gray for contrast
+const BG         = '#0a0a0f';  // Near-black background
 
-/* ═══════════════════════════════════════════ */
-/* ─── LAYERED PLATFORM BASE ─── */
-/* ═══════════════════════════════════════════ */
-const Platform = () => {
+/* ═══════════════════════════════════════════════════════════════ */
+/*  ANIMATION CONSTANTS                                           */
+/* ═══════════════════════════════════════════════════════════════ */
+const OSCILLATION_SPEED    = 2.2;    // ~2.85s per cycle  (2π/2.2)
+const OSCILLATION_RANGE    = 0.35;   // ~35px equivalent vertical range
+const RING_ROTATION_SPEED  = 1.1;    // ~5.7s per full rotation
+const NODE_DELAY           = 0.2;    // 0.2s phase delay for energy node
+
+/* ═══════════════════════════════════════════════════════════════ */
+/*  BASE PLATFORM — Static, grounded foundation                   */
+/* ═══════════════════════════════════════════════════════════════ */
+const BasePlatform = () => {
   return (
-    <group>
-      {/* Outer Base - Rounded large slab */}
-      <RoundedBox args={[9, 0.35, 6]} radius={0.15} position={[0, -0.35, 0]}>
-        <meshStandardMaterial color={BODY_LIGHT} metalness={0.1} roughness={0.4} />
+    <group position={[0, -0.5, 0]}>
+      {/* Outer base slab */}
+      <RoundedBox args={[4.5, 0.25, 4.5]} radius={0.08} smoothness={4}>
+        <meshStandardMaterial color={GRAY} metalness={0.15} roughness={0.4} />
       </RoundedBox>
 
-      {/* Inner Raised Platform */}
-      <RoundedBox args={[7.5, 0.4, 4.8]} radius={0.1} position={[0, 0, 0]}>
-        <meshStandardMaterial color={BODY} metalness={0.15} roughness={0.35} />
+      {/* Inner raised platform */}
+      <RoundedBox args={[3.6, 0.3, 3.6]} radius={0.06} smoothness={4} position={[0, 0.25, 0]}>
+        <meshStandardMaterial color={WHITE} metalness={0.2} roughness={0.3} />
       </RoundedBox>
 
-      {/* Accent trim ring around inner platform */}
-      <mesh position={[0, -0.18, 0]}>
-        <boxGeometry args={[7.7, 0.06, 5]} />
-        <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
+      {/* Blue accent trim */}
+      <mesh position={[0, 0.12, 0]}>
+        <boxGeometry args={[3.8, 0.04, 3.8]} />
+        <meshStandardMaterial color={BLUE} metalness={0.4} roughness={0.2} emissive={BLUE} emissiveIntensity={0.15} />
       </mesh>
 
-      {/* Center Elevated Pad (where tower sits) */}
-      <RoundedBox args={[2.8, 0.25, 2.8]} radius={0.08} position={[0, 0.32, -0.3]}>
-        <meshStandardMaterial color={BODY_LIGHT} metalness={0.1} roughness={0.3} />
+      {/* Center elevated pad */}
+      <RoundedBox args={[2.6, 0.15, 2.6]} radius={0.05} smoothness={4} position={[0, 0.47, 0]}>
+        <meshStandardMaterial color={WHITE} metalness={0.1} roughness={0.3} />
       </RoundedBox>
 
-      {/* Blue/Green inset panel on center pad */}
-      <mesh position={[0, 0.46, -0.3]}>
-        <boxGeometry args={[2, 0.02, 2]} />
-        <meshStandardMaterial color={ACCENT} metalness={0.4} roughness={0.2} />
+      {/* Blue inset on pad */}
+      <mesh position={[0, 0.56, 0]}>
+        <boxGeometry args={[2.2, 0.02, 2.2]} />
+        <meshStandardMaterial color={BLUE_DEEP} metalness={0.5} roughness={0.15} emissive={BLUE_DEEP} emissiveIntensity={0.3} />
       </mesh>
 
-      {/* Small scattered button pads on surface */}
-      {[
-        [-2.5, 0.22, 1.5], [2.5, 0.22, 1.8], [-3, 0.22, -1], [3.2, 0.22, -0.5],
-        [-1.5, 0.22, 2], [1.5, 0.22, -2], [0, 0.22, 2.2]
-      ].map((pos, i) => (
-        <RoundedBox key={i} args={[0.4, 0.1, 0.4]} radius={0.05} position={pos}>
-          <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
-        </RoundedBox>
-      ))}
+      {/* Soft shadow disc */}
+      <mesh position={[0, -0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[3, 64]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.15} />
+      </mesh>
     </group>
   );
 };
 
-/* ═══════════════════════════════════════════ */
-/* ─── CENTRAL PROCESSING TOWER ─── */
-/* ═══════════════════════════════════════════ */
-const CentralTower = () => {
-  const ringRef = useRef();
-  const glowRef = useRef();
-  
-  useFrame((state) => {
-    ringRef.current.rotation.y = state.clock.elapsedTime * 0.6;
-    glowRef.current.material.emissiveIntensity = 2 + Math.sin(state.clock.elapsedTime * 2) * 1;
-  });
+/* ═══════════════════════════════════════════════════════════════ */
+/*  SUPPORT ARM — Single articulated arm from base to cube        */
+/*  Two segments with joint spheres, anchored at base, connected  */
+/*  to the oscillating cube.                                      */
+/* ═══════════════════════════════════════════════════════════════ */
+const SupportArm = React.forwardRef(({ side }, ref) => {
+  const mirror = side === 'left' ? -1 : 1;
 
   return (
-    <group position={[0, 0.47, -0.3]}>
-      {/* Bottom large cube (base) */}
-      <RoundedBox args={[2, 0.8, 2]} radius={0.05} position={[0, 0.4, 0]}>
-        <meshStandardMaterial color={BODY_LIGHT} metalness={0.15} roughness={0.3} />
-      </RoundedBox>
-
-      {/* Middle cube (narrower) */}
-      <RoundedBox args={[1.4, 1.2, 1.4]} radius={0.04} position={[0, 1.4, 0]}>
-        <meshStandardMaterial color={BODY} metalness={0.1} roughness={0.3} />
-      </RoundedBox>
-
-      {/* Top cube (cap) */}
-      <RoundedBox args={[1.6, 0.5, 1.6]} radius={0.04} position={[0, 2.3, 0]}>
-        <meshStandardMaterial color={BODY_LIGHT} metalness={0.1} roughness={0.25} />
-      </RoundedBox>
-
-      {/* Blue front inset panel on middle cube */}
-      <mesh position={[0, 1.4, 0.71]}>
-        <boxGeometry args={[0.6, 0.5, 0.02]} />
-        <meshStandardMaterial color={ACCENT} metalness={0.4} roughness={0.2} />
+    <group ref={ref} position={[mirror * 1.8, 0, 0]}>
+      {/* Base anchor joint (on platform) */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.14, 24, 24]} />
+        <meshStandardMaterial color={BLUE} metalness={0.4} roughness={0.2} emissive={BLUE} emissiveIntensity={0.5} />
       </mesh>
 
-      {/* Glowing Sphere on top */}
-      <mesh ref={glowRef} position={[0, 2.8, 0]}>
-        <sphereGeometry args={[0.18, 32, 32]} />
-        <meshStandardMaterial color="#ffffff" emissive={ACCENT} emissiveIntensity={3} />
-      </mesh>
-      <pointLight position={[0, 2.8, 0]} color={ACCENT} intensity={2} distance={5} />
-
-      {/* Orbital Ring */}
-      <mesh ref={ringRef} position={[0, 2.1, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[2.0, 0.025, 16, 100]} />
-        <meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={0.8} transparent opacity={0.7} />
+      {/* Lower arm segment — angled inward toward cube */}
+      <mesh position={[mirror * -0.45, 0.55, 0]} rotation={[0, 0, mirror * 0.5]}>
+        <boxGeometry args={[0.14, 1.3, 0.14]} />
+        <meshStandardMaterial color={WHITE} metalness={0.25} roughness={0.25} />
       </mesh>
 
-      {/* BRACKET ARMS — L-shaped supports from tower sides */}
-      {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((rot, i) => (
-        <group key={i} rotation={[0, rot, 0]} position={[0, 1.0, 0]}>
-          {/* Arm extending outward */}
-          <mesh position={[1.2, 0, 0]} rotation={[0, 0, Math.PI / 4]}>
-            <boxGeometry args={[1.2, 0.12, 0.12]} />
-            <meshStandardMaterial color={BODY} metalness={0.2} roughness={0.3} />
-          </mesh>
-          {/* Arm elbow (bracket angle) */}
-          <mesh position={[1.6, -0.3, 0]} rotation={[0, 0, -Math.PI / 6]}>
-            <boxGeometry args={[0.6, 0.1, 0.1]} />
-            <meshStandardMaterial color={BODY} metalness={0.2} roughness={0.3} />
-          </mesh>
-          {/* Joint Sphere */}
-          <mesh position={[1.0, 0.15, 0]}>
-            <sphereGeometry args={[0.1, 16, 16]} />
-            <meshStandardMaterial color={ACCENT} metalness={0.4} roughness={0.2} />
-          </mesh>
-        </group>
-      ))}
+      {/* Elbow joint */}
+      <mesh position={[mirror * -0.75, 1.05, 0]}>
+        <sphereGeometry args={[0.12, 24, 24]} />
+        <meshStandardMaterial color={BLUE} metalness={0.4} roughness={0.2} emissive={BLUE} emissiveIntensity={0.5} />
+      </mesh>
+
+      {/* Upper arm segment */}
+      <mesh position={[mirror * -1.05, 1.65, 0]} rotation={[0, 0, mirror * -0.3]}>
+        <boxGeometry args={[0.12, 1.2, 0.12]} />
+        <meshStandardMaterial color={GRAY} metalness={0.2} roughness={0.3} />
+      </mesh>
+
+      {/* Top connection joint (touches cube) */}
+      <mesh position={[mirror * -1.2, 2.2, 0]}>
+        <sphereGeometry args={[0.1, 24, 24]} />
+        <meshStandardMaterial color={BLUE_GLOW} metalness={0.3} roughness={0.2} emissive={BLUE_GLOW} emissiveIntensity={0.8} />
+      </mesh>
     </group>
   );
-};
+});
+SupportArm.displayName = 'SupportArm';
 
-/* ═══════════════════════════════════════════ */
-/* ─── ROBOTIC ARM (cube head on post) ─── */
-/* ═══════════════════════════════════════════ */
-const RoboticArm = ({ position }) => {
-  const armRef = useRef();
-  useFrame((state) => {
-    armRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.4) * 0.3;
-  });
-
+/* ═══════════════════════════════════════════════════════════════ */
+/*  ORBITAL RING — Horizontal orbit around the cube               */
+/* ═══════════════════════════════════════════════════════════════ */
+const OrbitalRing = React.forwardRef((props, ref) => {
   return (
-    <group ref={armRef} position={position}>
-      {/* Base block */}
-      <RoundedBox args={[0.5, 0.3, 0.5]} radius={0.05} position={[0, 0.35, 0]}>
-        <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
-      </RoundedBox>
-
-      {/* Vertical post */}
-      <mesh position={[0, 0.9, 0]}>
-        <cylinderGeometry args={[0.08, 0.1, 0.9, 8]} />
-        <meshStandardMaterial color={BODY} metalness={0.2} roughness={0.3} />
-      </mesh>
-
-      {/* Joint sphere */}
-      <mesh position={[0, 1.35, 0]}>
-        <sphereGeometry args={[0.12, 16, 16]} />
-        <meshStandardMaterial color={BODY_DARK} metalness={0.3} roughness={0.3} />
-      </mesh>
-
-      {/* Horizontal arm */}
-      <mesh position={[0.4, 1.35, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.06, 0.06, 0.7, 8]} />
-        <meshStandardMaterial color={BODY} metalness={0.2} roughness={0.3} />
-      </mesh>
-
-      {/* Cube Head */}
-      <RoundedBox args={[0.4, 0.4, 0.4]} radius={0.04} position={[0.8, 1.35, 0]}>
-        <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
-      </RoundedBox>
-    </group>
-  );
-};
-
-/* ═══════════════════════════════════════════ */
-/* ─── BAR CHART (bars behind glass panel) ─── */
-/* ═══════════════════════════════════════════ */
-const BarChart = ({ position }) => {
-  const barHeights = [0.5, 0.9, 0.35, 0.7, 0.55];
-  return (
-    <group position={position}>
-      {/* Base shelf */}
-      <RoundedBox args={[1.4, 0.12, 0.5]} radius={0.03} position={[0, 0.28, 0]}>
-        <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
-      </RoundedBox>
-
-      {/* Glass back panel */}
-      <mesh position={[0, 0.8, -0.15]}>
-        <boxGeometry args={[1.2, 1.0, 0.03]} />
-        <meshPhysicalMaterial 
-          color="#ffffff" 
-          transmission={0.9} 
-          roughness={0.1} 
-          metalness={0} 
-          transparent 
-          opacity={0.15} 
-        />
-      </mesh>
-
-      {/* Bars */}
-      {barHeights.map((h, i) => (
-        <RoundedBox 
-          key={i} 
-          args={[0.14, h, 0.14]} 
-          radius={0.02} 
-          position={[(i - 2) * 0.22, 0.34 + h / 2, 0.05]}
-        >
-          <meshStandardMaterial 
-            color={i % 2 === 0 ? ACCENT : BODY} 
-            metalness={0.2} 
-            roughness={0.3}
-            emissive={i % 2 === 0 ? ACCENT : '#000000'}
-            emissiveIntensity={i % 2 === 0 ? 0.3 : 0}
-          />
-        </RoundedBox>
-      ))}
-    </group>
-  );
-};
-
-/* ═══════════════════════════════════════════ */
-/* ─── DNA DISPLAY STAND ─── */
-/* ═══════════════════════════════════════════ */
-const DNAStand = ({ position }) => {
-  const helixRef = useRef();
-  useFrame((state) => {
-    helixRef.current.rotation.y = state.clock.elapsedTime * 0.5;
-  });
-
-  return (
-    <group position={position}>
-      {/* Base platform */}
-      <RoundedBox args={[1.2, 0.15, 1.2]} radius={0.05} position={[0, 0.28, 0]}>
-        <meshStandardMaterial color={BODY_LIGHT} metalness={0.1} roughness={0.4} />
-      </RoundedBox>
-      {/* Accent rim */}
-      <mesh position={[0, 0.2, 0]}>
-        <boxGeometry args={[1.3, 0.04, 1.3]} />
-        <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
-      </mesh>
-
-      {/* Stand pillar (thin) */}
-      <mesh position={[0, 0.85, 0]}>
-        <cylinderGeometry args={[0.04, 0.06, 1.0, 8]} />
-        <meshStandardMaterial color={BODY} metalness={0.2} roughness={0.3} />
-      </mesh>
-
-      {/* Flat Display Panel on top */}
-      <RoundedBox args={[1.0, 0.08, 1.0]} radius={0.04} position={[0, 1.4, 0]}>
-        <meshStandardMaterial color={ACCENT} metalness={0.35} roughness={0.3} />
-      </RoundedBox>
-
-      {/* DNA Helix under the panel */}
-      <group ref={helixRef} position={[0, 0.85, 0]}>
-        {Array.from({ length: 16 }, (_, i) => {
-          const t = i * 0.35;
-          const y = (i - 8) * 0.06;
-          return (
-            <React.Fragment key={i}>
-              <mesh position={[Math.cos(t) * 0.2, y, Math.sin(t) * 0.2]}>
-                <sphereGeometry args={[0.035, 8, 8]} />
-                <meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={1.5} />
-              </mesh>
-              <mesh position={[Math.cos(t + Math.PI) * 0.2, y, Math.sin(t + Math.PI) * 0.2]}>
-                <sphereGeometry args={[0.035, 8, 8]} />
-                <meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={1.5} />
-              </mesh>
-            </React.Fragment>
-          );
-        })}
-      </group>
-    </group>
-  );
-};
-
-/* ═══════════════════════════════════════════ */
-/* ─── MOLECULE IN GLASS CONTAINER ─── */
-/* ═══════════════════════════════════════════ */
-const MoleculeDisplay = ({ position }) => {
-  const molRef = useRef();
-  useFrame((state) => {
-    molRef.current.rotation.y = state.clock.elapsedTime * 0.3;
-    molRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.2) * 0.15;
-  });
-
-  const atoms = [
-    [0, 0, 0], [0.3, 0.25, 0], [-0.25, 0.2, 0.2],
-    [0, -0.25, 0.25], [0.2, -0.15, -0.25], [-0.2, -0.1, -0.2]
-  ];
-
-  return (
-    <group position={position}>
-      {/* Base platform with accent trim */}
-      <RoundedBox args={[1.5, 0.15, 1.5]} radius={0.06} position={[0, 0.28, 0]}>
-        <meshStandardMaterial color={BODY_LIGHT} metalness={0.1} roughness={0.4} />
-      </RoundedBox>
-      <mesh position={[0, 0.2, 0]}>
-        <boxGeometry args={[1.6, 0.05, 1.6]} />
-        <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} />
-      </mesh>
-
-      {/* Inner raised pad */}
-      <RoundedBox args={[1.1, 0.1, 1.1]} radius={0.04} position={[0, 0.4, 0]}>
-        <meshStandardMaterial color={BODY} metalness={0.15} roughness={0.3} />
-      </RoundedBox>
-
-      {/* Glass Cube Container */}
-      <mesh position={[0, 1.0, 0]}>
-        <boxGeometry args={[1.0, 1.0, 1.0]} />
-        <meshPhysicalMaterial 
-          color="#ffffff"
-          transmission={0.92}
-          roughness={0.05}
-          metalness={0}
-          thickness={0.3}
+    <group {...props}>
+      {/* Main ring */}
+      <mesh ref={ref} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[2.2, 0.03, 24, 128]} />
+        <meshStandardMaterial
+          color={BLUE_GLOW}
+          emissive={BLUE_GLOW}
+          emissiveIntensity={1.2}
           transparent
-          opacity={0.12}
+          opacity={0.75}
+          metalness={0.3}
+          roughness={0.1}
         />
       </mesh>
-      {/* Glass edges wireframe */}
-      <mesh position={[0, 1.0, 0]}>
-        <boxGeometry args={[1.02, 1.02, 1.02]} />
-        <meshStandardMaterial color={ACCENT} wireframe transparent opacity={0.12} />
-      </mesh>
 
-      {/* Molecule inside */}
-      <group ref={molRef} position={[0, 1.0, 0]}>
-        {atoms.map((pos, i) => (
-          <mesh key={i} position={pos}>
-            <sphereGeometry args={[0.08, 16, 16]} />
-            <meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={2} />
-          </mesh>
-        ))}
-        {/* Bonds from center atom to others */}
-        {atoms.slice(1).map((pos, i) => {
-          const center = atoms[0];
-          const mid = [(center[0]+pos[0])/2, (center[1]+pos[1])/2, (center[2]+pos[2])/2];
-          const len = Math.sqrt(pos.reduce((s, v, j) => s + (v-center[j])**2, 0));
-          return (
-            <mesh key={`b${i}`} position={mid}>
-              <cylinderGeometry args={[0.02, 0.02, len, 6]} />
-              <meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={1} transparent opacity={0.6} />
-            </mesh>
-          );
-        })}
-      </group>
+      {/* Secondary inner ring for depth */}
+      <mesh ref={null} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[2.0, 0.015, 16, 100]} />
+        <meshStandardMaterial
+          color={BLUE}
+          emissive={BLUE}
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.35}
+        />
+      </mesh>
     </group>
   );
-};
+});
+OrbitalRing.displayName = 'OrbitalRing';
 
-/* ═══════════════════════════════════════════ */
-/* ─── CURVED CONVEYOR PATHS ─── */
-/* ═══════════════════════════════════════════ */
-const ConveyorPaths = () => {
-  const packetsRef = useRef([]);
-
-  useFrame((state) => {
-    packetsRef.current.forEach((p, i) => {
-      if (!p) return;
-      const t = ((state.clock.elapsedTime * 0.25 + i * 0.33) % 1);
-      // S-curve across the platform
-      p.position.x = THREE.MathUtils.lerp(-3.5, 3.5, t);
-      p.position.z = Math.sin(t * Math.PI * 2) * 1.2;
-      p.position.y = 0.3;
-    });
-  });
-
-  // Create the curved channel shape using tube-like flat boxes
-  const channelPoints = useMemo(() => {
-    const pts = [];
-    for (let i = 0; i <= 20; i++) {
-      const t = i / 20;
-      const x = THREE.MathUtils.lerp(-3.5, 3.5, t);
-      const z = Math.sin(t * Math.PI * 2) * 1.2;
-      pts.push([x, 0.22, z]);
-    }
-    return pts;
-  }, []);
-
+/* ═══════════════════════════════════════════════════════════════ */
+/*  ENERGY NODE — Glowing sphere/droplet above the cube           */
+/* ═══════════════════════════════════════════════════════════════ */
+const EnergyNode = React.forwardRef((props, ref) => {
   return (
-    <group>
-      {/* Channel segments */}
-      {channelPoints.slice(0, -1).map((p, i) => {
-        const next = channelPoints[i + 1];
-        const midX = (p[0] + next[0]) / 2;
-        const midZ = (p[2] + next[2]) / 2;
-        const dx = next[0] - p[0];
-        const dz = next[2] - p[2];
-        const angle = Math.atan2(dz, dx);
-        const len = Math.sqrt(dx*dx + dz*dz);
-        return (
-          <mesh key={i} position={[midX, 0.22, midZ]} rotation={[0, -angle, 0]}>
-            <boxGeometry args={[len * 1.05, 0.03, 0.5]} />
-            <meshStandardMaterial color={ACCENT} metalness={0.3} roughness={0.3} transparent opacity={0.6} />
-          </mesh>
-        );
-      })}
+    <group ref={ref} {...props}>
+      {/* Core sphere */}
+      <mesh>
+        <sphereGeometry args={[0.18, 32, 32]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive={BLUE_GLOW}
+          emissiveIntensity={3}
+          metalness={0.1}
+          roughness={0.05}
+        />
+      </mesh>
+      {/* Glow halo */}
+      <mesh>
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshBasicMaterial color={BLUE_GLOW} transparent opacity={0.08} />
+      </mesh>
+      {/* Point light emanating from node */}
+      <pointLight color={BLUE_GLOW} intensity={3} distance={6} />
+    </group>
+  );
+});
+EnergyNode.displayName = 'EnergyNode';
 
-      {/* Small radial stripe pattern on conveyor (detail) */}
-      {channelPoints.filter((_, i) => i % 3 === 0).map((p, i) => (
-        <mesh key={`stripe-${i}`} position={[p[0], 0.24, p[2]]}>
-          <boxGeometry args={[0.03, 0.01, 0.45]} />
-          <meshStandardMaterial color={ACCENT_DIM} transparent opacity={0.4} />
+/* ═══════════════════════════════════════════════════════════════ */
+/*  CENTRAL CUBE — Main animated glossy cube with inset panels    */
+/* ═══════════════════════════════════════════════════════════════ */
+const CentralCube = React.forwardRef((props, ref) => {
+  return (
+    <group ref={ref} {...props}>
+      {/* Bottom block (wide base) */}
+      <RoundedBox args={[2.0, 0.7, 2.0]} radius={0.06} smoothness={4} position={[0, 0.35, 0]}>
+        <meshStandardMaterial color={WHITE} metalness={0.2} roughness={0.25} />
+      </RoundedBox>
+
+      {/* Middle block (narrower, taller) */}
+      <RoundedBox args={[1.5, 1.1, 1.5]} radius={0.05} smoothness={4} position={[0, 1.25, 0]}>
+        <meshStandardMaterial color={GRAY} metalness={0.15} roughness={0.3} />
+      </RoundedBox>
+
+      {/* Top cap block */}
+      <RoundedBox args={[1.7, 0.4, 1.7]} radius={0.05} smoothness={4} position={[0, 2.0, 0]}>
+        <meshStandardMaterial color={WHITE} metalness={0.2} roughness={0.2} />
+      </RoundedBox>
+
+      {/* Blue accent panels on all 4 faces of the middle block */}
+      {[
+        { pos: [0, 1.25, 0.76],  rot: [0, 0, 0] },
+        { pos: [0, 1.25, -0.76], rot: [0, Math.PI, 0] },
+        { pos: [0.76, 1.25, 0],  rot: [0, Math.PI / 2, 0] },
+        { pos: [-0.76, 1.25, 0], rot: [0, -Math.PI / 2, 0] },
+      ].map((face, i) => (
+        <mesh key={i} position={face.pos} rotation={face.rot}>
+          <boxGeometry args={[0.5, 0.45, 0.02]} />
+          <meshStandardMaterial
+            color={BLUE}
+            metalness={0.5}
+            roughness={0.15}
+            emissive={BLUE}
+            emissiveIntensity={0.4}
+          />
         </mesh>
       ))}
 
-      {/* Moving data capsules */}
-      {[0, 1, 2].map((i) => (
-        <RoundedBox key={i} ref={(el) => (packetsRef.current[i] = el)} args={[0.2, 0.12, 0.12]} radius={0.03}>
-          <meshPhysicalMaterial 
-            color="#ffffff" 
-            transmission={0.8} 
-            roughness={0.1} 
-            transparent 
-            opacity={0.5}
-          />
-        </RoundedBox>
-      ))}
+      {/* Accent line between bottom and middle */}
+      <mesh position={[0, 0.72, 0]}>
+        <boxGeometry args={[1.55, 0.03, 1.55]} />
+        <meshStandardMaterial color={BLUE} emissive={BLUE} emissiveIntensity={0.3} />
+      </mesh>
+    </group>
+  );
+});
+CentralCube.displayName = 'CentralCube';
+
+/* ═══════════════════════════════════════════════════════════════ */
+/*  MECHANICAL SYSTEM — Orchestrates all animation logic          */
+/* ═══════════════════════════════════════════════════════════════ */
+const MechanicalSystem = ({ hovered }) => {
+  const cubeRef = useRef();
+  const nodeRef = useRef();
+  const ringGroupRef = useRef();
+  const ringRef = useRef();
+  const leftArmRef = useRef();
+  const rightArmRef = useRef();
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+
+    /* ─── 1. Vertical Oscillation (Primary) ─── */
+    const osc = Math.sin(t * OSCILLATION_SPEED) * OSCILLATION_RANGE;
+
+    // Cube follows oscillation
+    if (cubeRef.current) {
+      cubeRef.current.position.y = osc;
+    }
+
+    /* ─── 2. Energy Node (delayed micro-floating) ─── */
+    if (nodeRef.current) {
+      const nodeOsc = Math.sin((t - NODE_DELAY) * OSCILLATION_SPEED) * OSCILLATION_RANGE;
+      const microFloat = Math.sin(t * 3.5) * 0.04; // subtle extra wobble
+      nodeRef.current.position.y = 2.55 + nodeOsc + microFloat;
+
+      // Pulse glow
+      const pulse = 2.5 + Math.sin(t * 2.5) * 1.0;
+      nodeRef.current.children[0].material.emissiveIntensity = pulse;
+    }
+
+    /* ─── 3. Ring Rotation (Independent, continuous) ─── */
+    if (ringGroupRef.current) {
+      // Ring follows cube Y but rotates independently
+      ringGroupRef.current.position.y = 1.8 + osc;
+    }
+    if (ringRef.current) {
+      ringRef.current.rotation.z = t * RING_ROTATION_SPEED;
+    }
+
+    /* ─── 4. Support Arms (Synchronized with cube) ─── */
+    const armAngle = osc * 0.35; // subtle flex
+
+    if (leftArmRef.current) {
+      // Adjust arm segment angles to track cube position
+      const lowerArm = leftArmRef.current.children[1]; // lower segment
+      const upperArm = leftArmRef.current.children[3]; // upper segment
+      if (lowerArm) lowerArm.rotation.z = -1 * 0.45 + armAngle * 0.6;
+      if (upperArm) upperArm.rotation.z = -1 * -0.35 - armAngle * 0.8;
+    }
+
+    if (rightArmRef.current) {
+      const lowerArm = rightArmRef.current.children[1];
+      const upperArm = rightArmRef.current.children[3];
+      if (lowerArm) lowerArm.rotation.z = 1 * 0.45 - armAngle * 0.6;
+      if (upperArm) upperArm.rotation.z = 1 * -0.35 + armAngle * 0.8;
+    }
+
+    /* ─── 5. Hover Effect ─── */
+    const targetScale = hovered ? 1.04 : 1.0;
+    if (cubeRef.current) {
+      cubeRef.current.scale.lerp(
+        new THREE.Vector3(targetScale, targetScale, targetScale),
+        0.08
+      );
+    }
+  });
+
+  return (
+    <group position={[0, 0.1, 0]}>
+      {/* Support Arms (static base, dynamic joints) */}
+      <SupportArm ref={leftArmRef} side="left" />
+      <SupportArm ref={rightArmRef} side="right" />
+
+      {/* Central Cube (oscillating) */}
+      <CentralCube ref={cubeRef} />
+
+      {/* Orbital Ring (follows cube Y, rotates independently) */}
+      <group ref={ringGroupRef}>
+        <OrbitalRing ref={ringRef} position={[0, 1.8, 0]} />
+      </group>
+
+      {/* Energy Node (delayed oscillation + micro-float) */}
+      <EnergyNode ref={nodeRef} position={[0, 2.55, 0]} />
     </group>
   );
 };
 
-/* ═══════════════════════════════════════════ */
-/* ─── FLOATING PARTICLES ─── */
-/* ═══════════════════════════════════════════ */
-const Particles = ({ count = 25 }) => {
+/* ═══════════════════════════════════════════════════════════════ */
+/*  FLOATING PARTICLES — Ambient detail                           */
+/* ═══════════════════════════════════════════════════════════════ */
+const FloatingParticles = ({ count = 30 }) => {
   const ref = useRef();
-  const positions = useMemo(() => {
+  const positions = React.useMemo(() => {
     const pos = [];
     for (let i = 0; i < count; i++) {
-      pos.push((Math.random() - 0.5) * 12, Math.random() * 6, (Math.random() - 0.5) * 8);
+      pos.push(
+        (Math.random() - 0.5) * 10,
+        Math.random() * 5,
+        (Math.random() - 0.5) * 10
+      );
     }
     return new Float32Array(pos);
   }, [count]);
 
   useFrame((state) => {
-    ref.current.rotation.y = state.clock.elapsedTime * 0.015;
+    if (ref.current) {
+      ref.current.rotation.y = state.clock.elapsedTime * 0.02;
+    }
   });
 
   return (
@@ -439,62 +341,79 @@ const Particles = ({ count = 25 }) => {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
       </bufferGeometry>
-      <pointsMaterial color={ACCENT} size={0.03} transparent opacity={0.4} sizeAttenuation />
+      <pointsMaterial color={BLUE_GLOW} size={0.04} transparent opacity={0.35} sizeAttenuation />
     </points>
   );
 };
 
-/* ═══════════════════════════════════════════ */
-/* ─── MAIN NEXUS FACTORY COMPONENT ─── */
-/* ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════ */
+/*  MAIN NEXUS FACTORY COMPONENT                                  */
+/* ═══════════════════════════════════════════════════════════════ */
 const NexusFactory = () => {
+  const [hovered, setHovered] = useState(false);
+
+  const handlePointerOver = useCallback(() => setHovered(true), []);
+  const handlePointerOut = useCallback(() => setHovered(false), []);
+
   return (
-    <div className="fixed inset-0 z-0 bg-primary">
+    <div
+      className="fixed inset-0 z-0 bg-primary"
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+    >
       <Canvas
         camera={{
-          position: [10, 7, 10],
-          fov: 30,
+          position: [8, 5.5, 8],
+          fov: 32,
           near: 0.1,
           far: 100,
         }}
-        gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping }}
-        style={{ background: '#050505' }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.1,
+        }}
+        style={{ background: BG }}
       >
-        {/* Lighting — soft studio setup */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[8, 12, 8]} intensity={1.2} color="#ffffff" castShadow />
-        <directionalLight position={[-5, 8, -5]} intensity={0.4} color={ACCENT} />
-        <pointLight position={[0, 5, 0]} intensity={1.5} color={ACCENT} distance={15} />
-        <hemisphereLight color="#ffffff" groundColor="#0a0a0a" intensity={0.3} />
-
-        {/* Fog for atmosphere */}
-        <fog attach="fog" args={['#050505', 12, 30]} />
-
-        {/* The Scene — all elements positioned to match the reference layout */}
-        <group rotation={[0, -Math.PI / 5, 0]}>
-          <Platform />
-          <CentralTower />
-          <RoboticArm position={[-3, 0, -0.8]} />
-          <BarChart position={[-1.8, 0, -1.5]} />
-          <DNAStand position={[2.8, 0, -0.8]} />
-          <MoleculeDisplay position={[0.8, 0, 2.0]} />
-          <ConveyorPaths />
-          <Particles />
-        </group>
-
-        {/* Subtle auto-orbit for cinematic feel */}
-        <OrbitControls
-          enableZoom={false}
-          enablePan={false}
-          autoRotate
-          autoRotateSpeed={0.35}
-          minPolarAngle={Math.PI / 4}
-          maxPolarAngle={Math.PI / 3.2}
+        {/* ─── LIGHTING — Premium studio setup ─── */}
+        <ambientLight intensity={0.5} />
+        <directionalLight
+          position={[6, 10, 6]}
+          intensity={1.5}
+          color="#ffffff"
+          castShadow
         />
+        <directionalLight
+          position={[-4, 6, -4]}
+          intensity={0.5}
+          color={BLUE_GLOW}
+        />
+        <pointLight
+          position={[0, 6, 0]}
+          intensity={2}
+          color={BLUE}
+          distance={15}
+        />
+        <hemisphereLight
+          color="#ffffff"
+          groundColor="#0a0a12"
+          intensity={0.35}
+        />
+
+        {/* Atmospheric fog */}
+        <fog attach="fog" args={[BG, 10, 28]} />
+
+        {/* ─── SCENE ─── */}
+        <group rotation={[0, -Math.PI / 5, 0]}>
+          <BasePlatform />
+          <MechanicalSystem hovered={hovered} />
+          <FloatingParticles />
+        </group>
       </Canvas>
 
-      {/* Scanline overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_3px]" />
+      {/* Scanline overlay for cyberpunk feel */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_3px]" />
     </div>
   );
 };

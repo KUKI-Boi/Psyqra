@@ -40,7 +40,7 @@ const Home = () => {
           <motion.div variants={itemVariants} className="space-y-6">
             <div className="relative inline-block group">
               <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                TYPING<span className="text-accent underline decoration-accent/30 underline-offset-8">VERSE</span>
+                PSY<span className="text-accent underline decoration-accent/30 underline-offset-8">QRA</span>
               </h1>
               {/* Glitch Effect Proxy */}
               <div className="absolute -inset-1 bg-accent/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
